@@ -17,7 +17,21 @@ Item {
   readonly property string title: activePlayer ? String(activePlayer.trackTitle || "") : ""
   readonly property string artist: activePlayer ? String(activePlayer.trackArtist || "") : ""
   readonly property string album: activePlayer ? String(activePlayer.trackAlbum || "") : ""
-  readonly property string artUrl: activePlayer ? String(activePlayer.trackArtUrl || "") : ""
+  readonly property string artUrl: safeArtUrl(activePlayer ? String(activePlayer.trackArtUrl || "") : "")
+
+  // trackArtUrl is untrusted D-Bus input: any session process can register an
+  // org.mpris.MediaPlayer2.* service and set an arbitrary URI. Restrict it to
+  // the schemes legitimate players use so a malicious bus client cannot point
+  // the shell's Image element at an unexpected scheme handler.
+  function safeArtUrl(url) {
+    var value = String(url || "")
+    if (value === "") return ""
+    var match = /^([a-zA-Z][a-zA-Z0-9+.\-]*):/.exec(value)
+    if (!match) return ""
+    var scheme = match[1].toLowerCase()
+    if (scheme === "file" || scheme === "http" || scheme === "https" || scheme === "data") return value
+    return ""
+  }
 
   function playerKey(player) {
     if (!player) return ""
